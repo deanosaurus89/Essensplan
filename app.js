@@ -1,4 +1,11 @@
 // Essensplan – KaisKantine. Daten lokal im Browser (localStorage).
+// ADMIN-PASSWORT: SHA-256-Hash des Passworts. Ändern: neuen Hash erzeugen mit
+//   printf 'NeuesPasswort' | sha256sum   und hier eintragen. (Nur einfacher Schutz, kein echtes Sicherheitskonzept!)
+const ADMIN_PW_HASH='81159e06eebfef0b9b2b4ba5ba2e5e47c82ba31796a451f8c46ee114f1a34915';
+async function sha(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function login(e){e.preventDefault();if(await sha($('#apw').value)===ADMIN_PW_HASH){sessionStorage.setItem('adminOk','1');render()}else{$('#aerr').textContent='Falsches Passwort.'}}
+function logout(){sessionStorage.removeItem('adminOk');location.hash='#kunde'}
+function loginForm(){return `<div class="card"><h2>Admin-Anmeldung</h2><form onsubmit="login(event)" class="row"><input type="password" id="apw" placeholder="Passwort" autofocus><button>Anmelden</button></form><p id="aerr" style="color:#b33"></p></div>`}
 const KEY='essensplan-v1', DAYS=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'], DS=['Mo','Di','Mi','Do','Fr'];
 const CATS=['Tagesgericht','Kompott der Woche','Pasta','Pasta der Woche','Suppen','Suppe der Woche','Salate','Klassiker','Extra'];
 const uid=()=>Math.random().toString(36).slice(2,9);
@@ -32,7 +39,7 @@ $('#weekSel').onchange=e=>{S.cur=e.target.value;save();render()};
 function head(w){return `<p class="muted">${esc(S.anbieter)} · Speiseplan ${esc(w.ort)} · KW ${w.kw} – ${dayDate(w,0)} bis ${dayDate(w,4)}</p>`}
 
 // ---------- ADMIN ----------
-function admin(){const w=W();let h=`<div class="tabs noprint card">${[['plan','Speiseplan'],['kunden','Kunden & Anwesenheit'],['abr','Abrechnung'],['daten','Daten']].map(([k,l])=>`<button class="${adminTab===k?'on':''}" onclick="adminTab='${k}';render()">${l}</button>`).join('')}</div>`;
+function admin(){const w=W();let h=`<div class="tabs noprint card">${[['plan','Speiseplan'],['kunden','Kunden & Anwesenheit'],['abr','Abrechnung'],['daten','Daten']].map(([k,l])=>`<button class="${adminTab===k?'on':''}" onclick="adminTab='${k}';render()">${l}</button>`).join('')}<button class="sec" style="float:right" onclick="logout()">Abmelden</button></div>`;
  if(adminTab==='plan'){h+=`<div class="card"><h2>Woche</h2>${head(w)}<div class="row noprint">Neue Woche: KW <input id="nkw" type="number" min="1" max="53" style="width:4em" value="${w.kw+1}"> Jahr <input id="nyr" type="number" style="width:5em" value="${w.year}"> Ort <input id="nort" value="${esc(w.ort)}"> <label><input type="checkbox" id="ncopy" checked> Ständige Karte & Kunden übernehmen</label> <button onclick="newWeek()">Anlegen</button>
  <button class="del" onclick="delWeek()">Diese Woche löschen</button></div></div>
  <div class="card"><h2>Gericht hinzufügen</h2><div class="row"><select id="iday"><option value="">Ständige Karte (Mo–Fr)</option>${DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join('')}</select>
@@ -82,5 +89,5 @@ function kantine(){const w=W();let h=`<div class="card"><h2>Kantinen-Planung KW 
  h+=`<div class="card"><h2>Wochensumme</h2><table>${Object.entries(wk).map(([id,n])=>`<tr><td>${esc(item(id).name)}</td><td class="right"><b>${n}</b></td></tr>`).join('')||'<tr><td class="muted">–</td></tr>'}</table></div>`;return h}
 
 function render(){if(!S.weeks.some(w=>w.id===S.cur))S.cur=S.weeks[0].id;weekSel();const v=(location.hash||'#kunde').slice(1);document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash==='#'+v));
- $('#app').innerHTML=v==='admin'?admin():v==='kantine'?kantine():kunde()}
+ $('#app').innerHTML=v==='admin'?(sessionStorage.getItem('adminOk')?admin():loginForm()):v==='kantine'?kantine():kunde()}
 window.onhashchange=render;render();
