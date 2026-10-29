@@ -25,3 +25,41 @@ table.fixed{table-layout:fixed}table.fixed td{overflow-wrap:anywhere}
 .namewrap{position:relative;display:inline-block}.namewrap input{font-size:1.1rem;padding:.45rem 2.2rem .45rem .5rem;width:18em;border:2px solid #ccc;border-radius:6px}
 .namewrap input.found{border-color:#2a9d3a;background:#effaf0}.namewrap .chk{display:none;position:absolute;right:.6rem;top:50%;transform:translateY(-50%);color:#2a9d3a;font-weight:bold;font-size:1.4rem}
 .namewrap input.found+.chk{display:block}
+
+/* ===== Pink & Glitzer Theme ===== */
+:root{--p1:#e6007e;--p2:#ff2d95;--p3:#c2006b;--pl:#ffe3f1;--pd:#5a0033;--gold:#ffd166}
+body{background:linear-gradient(160deg,#fff0f7 0%,#ffd6ea 55%,#ffc2e0 100%) fixed;color:var(--pd);position:relative;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.55;
+ background-image:radial-gradient(circle,#fff 1px,transparent 1.6px),radial-gradient(circle,var(--p2) 1px,transparent 1.6px),radial-gradient(circle,var(--gold) .8px,transparent 1.4px);
+ background-size:90px 90px,140px 140px,60px 60px;background-position:0 0,40px 70px,20px 30px;animation:twinkle 6s ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.25}to{opacity:.7}}
+main,header{position:relative;z-index:1}
+header{background:linear-gradient(90deg,var(--p3),var(--p1) 50%,var(--p2));box-shadow:0 3px 14px #c2006b55}
+header h1{letter-spacing:.5px}nav a{border-radius:20px;transition:.2s}nav a:hover{background:#ffffff33}
+nav a.active{background:#fff!important;color:#c2006b!important;font-weight:bold}
+.card{border-radius:14px;box-shadow:0 4px 18px #e6007e22;border:1px solid #ffc2e0}
+h2,h3{color:var(--p3)}
+button{background:linear-gradient(135deg,var(--p1),var(--p2));border-radius:20px;box-shadow:0 2px 8px #e6007e44;transition:transform .15s,box-shadow .15s}
+button:hover{transform:translateY(-1px);box-shadow:0 4px 14px #e6007e66}
+button.sec{background:#a0607f}button.del{background:#7a1038}
+.tabs button{background:#fff;color:var(--p3);border:2px solid var(--p1);box-shadow:none}.tabs button.on{background:var(--p1);color:#fff}
+th{color:var(--p3)}td,th{border-bottom-color:#ffd0e6}
+input,select{border:1.5px solid #f5a3cb;border-radius:8px}input:focus,select:focus{outline:2px solid var(--p2);outline-offset:1px}
+.tag{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff}
+.day{background:#fff;border:1.5px solid #ffc2e0;border-radius:12px}.day h3{color:var(--p1)}
+.cat{color:var(--p3)}.dish.sel{background:var(--pl);box-shadow:inset 3px 0 0 var(--p1)}.dsum{color:var(--p3)}
+.tile{border-radius:20px;color:var(--p3);border:2px solid #ffc2e0;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.tile:hover{transform:translateY(-3px);box-shadow:0 10px 26px #e6007e44;background:#fff}
+.tile.big{background:linear-gradient(135deg,var(--p3),var(--p1) 45%,var(--p2));color:#fff;border:0;box-shadow:0 10px 30px #e6007e66;text-shadow:0 2px 8px #0003}
+.tile.big:hover{background:linear-gradient(135deg,var(--p3),var(--p1) 45%,var(--p2))}.tile.big small{color:#ffe3f1}
+.tile.big::after{content:"";position:absolute;inset:-50%;background:linear-gradient(115deg,transparent 40%,#ffffff55 50%,transparent 60%);animation:shine 4.5s ease-in-out infinite}
+@keyframes shine{0%,60%{transform:translateX(-60%)}100%{transform:translateX(60%)}}
+.tile .sp{position:absolute;color:var(--gold);animation:float 3s ease-in-out infinite;font-size:1.2rem}
+.tile.big .sp{color:#fff}
+@keyframes float{0%,100%{transform:translateY(0) scale(.8);opacity:.4}50%{transform:translateY(-8px) scale(1.15);opacity:1}}
+.namewrap input.found{border-color:#1f9d4a;background:#eefbf2;box-shadow:0 0 0 3px #1f9d4a33}
+.ok{color:#1f9d4a}
+.spark{position:fixed;pointer-events:none;z-index:99;font-size:14px;animation:burst .9s ease-out forwards}
+@keyframes burst{to{transform:translate(var(--dx),var(--dy)) scale(.3) rotate(180deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{body{background:#fff}body::before{display:none}header{display:none}}

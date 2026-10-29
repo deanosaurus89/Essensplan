@@ -96,11 +96,11 @@ function kunde(){const w=W();const present=S.customers.filter(c=>(attOf(w.id,c.i
   const dc=dayCost(c,w.id,d);tot+=dc;h+=`<div class="dsum">Tag: ${eur(dc)}${dc<dsum?`<br><span class="muted">gedeckelt (statt ${eur(dsum)})</span>`:''}</div></div>`}
  return h+`</div><h3>Summe Woche: ${eur(tot)}</h3><p class="ok">Bestellungen werden automatisch gespeichert.</p></div>`}
 function findName(n){n=n.trim().toLowerCase();return S.customers.find(c=>c.name.toLowerCase()===n)}
-function nameFb(){const n=$('#kn').value,c=findName(n),e=$('#kfb');$('#kn').classList.remove('found');if(!n.trim()){e.textContent='';return}
+function nameFb(){const n=$('#kn').value,c=findName(n),e=$('#kfb');const was=$('#kn').classList.contains('found');$('#kn').classList.remove('found');if(!n.trim()){e.textContent='';return}
  if(!c){e.innerHTML='<span style="color:#b33">✗ Name nicht bekannt</span>';return}
- const ok=(attOf(W().id,c.id)?.days||[]).length;$('#kn').classList.toggle('found',!!ok);e.innerHTML=ok?`<span class="ok">✓ ${esc(c.name)} gefunden${c.ma?' (Mitarbeiter)':''}</span>`:'<span style="color:#b33">Name bekannt, aber diese Woche keine Tage hinterlegt</span>'}
+ const ok=(attOf(W().id,c.id)?.days||[]).length;$('#kn').classList.toggle('found',!!ok);if(ok&&!was)sparkle($('#kn'));e.innerHTML=ok?`<span class="ok">✓ ${esc(c.name)} gefunden${c.ma?' (Mitarbeiter)':''}</span>`:'<span style="color:#b33">Name bekannt, aber diese Woche keine Tage hinterlegt</span>'}
 function pickK(){const c=findName($('#kn').value);if(!c){alert('Name nicht gefunden. Bitte genau wie bei der Verwaltung hinterlegt eingeben.');return}kundeId=c.id;render()}
-function setQ(cid,day,itemId,q){const w=W();S.orders=S.orders.filter(o=>!(o.weekId===w.id&&o.cid===cid&&o.day===day&&o.itemId===itemId));if(q>0)S.orders.push({weekId:w.id,cid,day,itemId,qty:q});save();render()}
+function setQ(cid,day,itemId,q){if(q>0)sparkle(document.activeElement);const w=W();S.orders=S.orders.filter(o=>!(o.weekId===w.id&&o.cid===cid&&o.day===day&&o.itemId===itemId));if(q>0)S.orders.push({weekId:w.id,cid,day,itemId,qty:q});save();render()}
 
 // ---------- KANTINE ----------
 function kantine(){const w=W();const all=S.orders.filter(o=>o.weekId===w.id),wk={};let wtot=0;
@@ -111,8 +111,13 @@ function kantine(){const w=W();const all=S.orders.filter(o=>o.weekId===w.id),wk=
   h+=`<div class="card"><h2>${DAYS[d]} <span class="muted">${dayDate(w,d)}</span></h2>${os.length?`<table class="fixed">${cols}<tr><th>Gericht</th><th class="right">Anzahl</th><th>Für</th></tr>${Object.entries(sum).map(([id,n])=>{wk[id]=(wk[id]||0)+n;return `<tr><td>${esc(item(id).name)}</td><td class="right"><b>${n}</b></td><td>${os.filter(o=>o.itemId===id).map(o=>esc(cust(o.cid).name)+(o.qty>1?' ×'+o.qty:'')+(cust(o.cid).ma?' [MA]':'')+' <span class="muted">('+esc(cust(o.cid).firma)+')</span>').join(', ')}</td></tr>`}).join('')}<tr><th>Tagessumme</th><th class="right">${os.reduce((s,o)=>s+o.qty,0)}</th><th>${eur(dt)}</th></tr></table>`:'<p class="muted">Keine Bestellungen.</p>'}</div>`}
  h+=`<div class="card"><h2>Wochensumme</h2><table class="fixed">${cols}<tr><th>Gericht</th><th class="right">Anzahl</th><th>Listenpreis</th></tr>${Object.entries(wk).map(([id,n])=>`<tr><td>${esc(item(id).name)}</td><td class="right"><b>${n}</b></td><td>${eur(all.filter(o=>o.itemId===id).reduce((s,o)=>s+val(o),0))}</td></tr>`).join('')}<tr><th>Gesamt (Listenpreis)</th><th class="right">${all.reduce((s,o)=>s+o.qty,0)}</th><th>${eur(all.reduce((s,o)=>s+val(o),0))}</th></tr><tr><th>Gesamt veranschlagt (inkl. Mitarbeiter-Deckel)</th><th></th><th>${eur(wtot)}</th></tr></table></div>`;return h}
 
-function home(){const w=W();return `<div class="home"><a class="tile big" href="#kunde"><span class="ico">🍽️</span>Bestellen<small>Essen für KW ${w.kw} auswählen</small></a>
+function home(){const w=W();return `<div class="home"><a class="tile big" href="#kunde"><span class="sp" style="top:14%;left:12%">✦</span><span class="sp" style="top:22%;right:15%;animation-delay:1s">✧</span><span class="sp" style="bottom:18%;left:28%;animation-delay:2s">✦</span><span class="sp" style="bottom:24%;right:26%;animation-delay:.5s">✧</span><span class="ico">🍽️</span>Bestellen<small>Essen für KW ${w.kw} auswählen</small></a>
  <a class="tile" href="#kantine"><span class="ico">👩‍🍳</span>Kantine / Ausgabe<small>Planung &amp; Ausgabeliste</small></a><a class="tile" href="#admin"><span class="ico">🔒</span>Admin<small>Speiseplan, Kunden, Abrechnung</small></a></div>`}
+// Zauberstaub-Funken (dezent) bei Bestätigungen
+function sparkle(el){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const r=el&&el.getBoundingClientRect?el.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0};
+ for(let k=0;k<12;k++){const s=document.createElement('span');s.className='spark';s.textContent=['✦','✧','•','✨'][k%4];s.style.color=['#e6007e','#ff2d95','#ffd166','#c2006b'][k%4];
+  s.style.left=(r.left+r.width/2)+'px';s.style.top=(r.top+r.height/2)+'px';const a=Math.PI*2*k/12,d=30+Math.random()*30;s.style.setProperty('--dx',Math.cos(a)*d+'px');s.style.setProperty('--dy',Math.sin(a)*d+'px');
+  document.body.appendChild(s);setTimeout(()=>s.remove(),950)}}
 function render(){if(!S.weeks.some(w=>w.id===S.cur))S.cur=S.weeks[0].id;weekSel();const v=(location.hash||'#start').slice(1);document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash==='#'+v));
  $('#app').innerHTML=v==='start'?home():v==='admin'?(sessionStorage.getItem('adminOk')?admin():loginForm()):v==='kantine'?kantine():kunde()}
 window.onhashchange=render;render();if(window.remoteInit)remoteInit();
