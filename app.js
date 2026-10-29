@@ -26,7 +26,7 @@ function seed(){const w={id:'2026-44',year:2026,kw:44,ort:'Arcus Park'};const it
  const c1={id:uid(),name:'Max Mustermann',firma:'Beispiel GmbH'},c2={id:uid(),name:'Erika Muster',firma:'Arcus Park Verwaltung'};
  return {anbieter:'Kai Tandel Gastronomiebetriebe – KaisKantine',weeks:[w],items,customers:[c1,c2],att:[{weekId:w.id,cid:c1.id,days:[0,1,2,3,4]},{weekId:w.id,cid:c2.id,days:[1,3]}],orders:[],cur:w.id}}
 let S=JSON.parse(localStorage.getItem(KEY)||'null')||seed();
-const save=()=>{localStorage.setItem(KEY,JSON.stringify(S));};
+function save(){localStorage.setItem(KEY,JSON.stringify(S));if(window.remoteSave)remoteSave()}
 const W=()=>S.weeks.find(w=>w.id===S.cur)||S.weeks[0];
 const itemsOf=(wid,day)=>S.items.filter(i=>i.weekId===wid&&(i.day===day||i.day===null));
 const attOf=(wid,cid)=>S.att.find(a=>a.weekId===wid&&a.cid===cid);
@@ -54,7 +54,7 @@ function admin(){const w=W();let h=`<div class="tabs noprint card">${[['plan','S
   h+=`<div class="card"><h2>Abrechnung KW ${w.kw}</h2>${head(w)}<button class="noprint" onclick="print()">Drucken</button> <button class="noprint sec" onclick="csv()">CSV exportieren</button>`;
   rows.forEach(r=>{h+=`<h3>${esc(r.c.name)} <span class="muted">${esc(r.c.firma)}</span></h3><table><tr><th>Tag</th><th>Gericht</th><th class="right">Anz.</th><th class="right">Einzel</th><th class="right">Summe</th></tr>${r.os.sort((a,b)=>a.day-b.day).map(o=>{const i=item(o.itemId);return `<tr><td>${DS[o.day]} ${dayDate(w,o.day)}</td><td>${esc(i.name)}</td><td class="right">${o.qty}</td><td class="right">${eur(i.price)}</td><td class="right">${eur(o.qty*i.price)}</td></tr>`}).join('')}<tr><th colspan=4>Gesamt</th><th class="right">${eur(r.sum)}</th></tr></table>`});
   h+=`<h3>Summe je Firma</h3><table>${Object.entries(firmen).map(([f,s])=>`<tr><td>${esc(f)}</td><td class="right">${eur(s)}</td></tr>`).join('')}<tr><th>Gesamt</th><th class="right">${eur(rows.reduce((s,r)=>s+r.sum,0))}</th></tr></table>${rows.length?'':'<p class="muted">Noch keine Bestellungen.</p>'}</div>`}
- if(adminTab==='daten'){h+=`<div class="card"><h2>Daten</h2><p>Alle Daten liegen lokal in diesem Browser. Zum Übertragen auf ein anderes Gerät exportieren/importieren.</p><div class="row">Anbieter: <input id="anb" size="50" value="${esc(S.anbieter)}"><button onclick="S.anbieter=$('#anb').value;save();render()">Speichern</button></div>
+ if(adminTab==='daten'){h+=`<div class="card"><h2>Daten</h2><p>${window.REMOTE_ON?'✅ Gemeinsame Datenbank (Supabase) aktiv – alle Geräte sehen dieselben Daten.':'⚠️ Keine Datenbank konfiguriert – Daten liegen nur in diesem Browser (siehe README: Supabase einrichten).'}</p><div class="row">Anbieter: <input id="anb" size="50" value="${esc(S.anbieter)}"><button onclick="S.anbieter=$('#anb').value;save();render()">Speichern</button></div>
  <div class="row"><button onclick="exp()">JSON exportieren</button><input type="file" id="imp" accept=".json" onchange="imp(this)"><button class="del" onclick="if(confirm('Alles zurücksetzen auf Beispieldaten KW 44?')){S=seed();save();render()}">Zurücksetzen</button></div></div>`}
  return h}
 function newWeek(){const kw=+$('#nkw').value,year=+$('#nyr').value,id=year+'-'+String(kw).padStart(2,'0');if(S.weeks.some(w=>w.id===id))return alert('Woche existiert bereits');const old=W();S.weeks.push({id,kw,year,ort:$('#nort').value});
@@ -90,4 +90,4 @@ function kantine(){const w=W();let h=`<div class="card"><h2>Kantinen-Planung KW 
 
 function render(){if(!S.weeks.some(w=>w.id===S.cur))S.cur=S.weeks[0].id;weekSel();const v=(location.hash||'#kunde').slice(1);document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash==='#'+v));
  $('#app').innerHTML=v==='admin'?(sessionStorage.getItem('adminOk')?admin():loginForm()):v==='kantine'?kantine():kunde()}
-window.onhashchange=render;render();
+window.onhashchange=render;render();if(window.remoteInit)remoteInit();
