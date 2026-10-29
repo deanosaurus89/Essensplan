@@ -17,3 +17,11 @@ table.fixed{table-layout:fixed}table.fixed td{overflow-wrap:anywhere}
 .dish{display:flex;justify-content:space-between;gap:.3rem;align-items:center;font-size:.85em;padding:.25rem;border-radius:4px;border-bottom:1px solid #eee}
 .dish.sel{background:#fdeccf}.dish input{width:3.2em}.dsum{text-align:right;font-weight:bold;margin-top:.4rem;font-size:.9em}
 @media(max-width:800px){.week{grid-template-columns:1fr}}
+.home{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;border-radius:12px;box-shadow:0 2px 6px #0002;padding:2rem;font-size:1.6rem;font-weight:bold;color:#1d2a3a;text-decoration:none;min-height:150px;text-align:center}
+.tile:hover{background:#fdeccf}.tile small{font-size:.9rem;font-weight:normal;color:#666;margin-top:.4rem}.tile .ico{font-size:2.5rem}
+.tile.big{grid-column:1/-1;background:#e8a33d;font-size:2.6rem;min-height:240px}.tile.big small{color:#333;font-size:1.1rem}.tile.big .ico{font-size:4rem}
+@media(max-width:600px){.home{grid-template-columns:1fr}}
+.namewrap{position:relative;display:inline-block}.namewrap input{font-size:1.1rem;padding:.45rem 2.2rem .45rem .5rem;width:18em;border:2px solid #ccc;border-radius:6px}
+.namewrap input.found{border-color:#2a9d3a;background:#effaf0}.namewrap .chk{display:none;position:absolute;right:.6rem;top:50%;transform:translateY(-50%);color:#2a9d3a;font-weight:bold;font-size:1.4rem}
+.namewrap input.found+.chk{display:block}

@@ -6,7 +6,7 @@ if(!U||!K)return;window.REMOTE_ON=true;
 const H={apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json'};
 const st=t=>{const e=document.getElementById('syncState');if(e)e.textContent=t};
 const oid=o=>[o.weekId,o.cid,o.day,o.itemId].join('|');
-const core=()=>JSON.stringify({anbieter:S.anbieter,weeks:S.weeks,items:S.items,customers:S.customers,att:S.att,maRabatt:S.maRabatt||0});
+const core=()=>JSON.stringify({anbieter:S.anbieter,weeks:S.weeks,items:S.items,customers:S.customers,att:S.att,maCap:S.maCap==null?4.57:S.maCap});
 let lastCore=null,lastOrd={},busy=false,timer=null,ready=false,pending=false;
 async function api(path,opt={}){const r=await fetch(U+'/rest/v1/'+path,{...opt,headers:{...H,...(opt.headers||{})}});if(!r.ok)throw new Error(r.status+' '+await r.text());return r.status===204?null:r.json().catch(()=>null)}
 async function pull(){

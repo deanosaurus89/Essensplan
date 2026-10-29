@@ -4,7 +4,7 @@
 const ADMIN_PW_HASH='81159e06eebfef0b9b2b4ba5ba2e5e47c82ba31796a451f8c46ee114f1a34915';
 async function sha(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function login(e){e.preventDefault();if(await sha($('#apw').value)===ADMIN_PW_HASH){sessionStorage.setItem('adminOk','1');render()}else{$('#aerr').textContent='Falsches Passwort.'}}
-function logout(){sessionStorage.removeItem('adminOk');location.hash='#kunde'}
+function logout(){sessionStorage.removeItem('adminOk');location.hash='#start'}
 function loginForm(){return `<div class="card"><h2>Admin-Anmeldung</h2><form onsubmit="login(event)" class="row"><input type="password" id="apw" placeholder="Passwort" autofocus><button>Anmelden</button></form><p id="aerr" style="color:#b33"></p></div>`}
 const KEY='essensplan-v1', DAYS=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'], DS=['Mo','Di','Mi','Do','Fr'];
 const CATS=['Tagesgericht','Kompott der Woche','Pasta','Pasta der Woche','Suppen','Suppe der Woche','Salate','Klassiker','Extra'];
@@ -24,7 +24,7 @@ function seed(){const w={id:'2026-44',year:2026,kw:44,ort:'Arcus Park'};const it
  it(null,'Suppe der Woche','Soljanka',6.5,'1,8,9,12,13,18,19,20,33'),it(null,'Salate','Gemischter Salat mit Tomate & Mozzarella',7.5,'1,5,8,9,33'),it(null,'Salate','Gemischter Salat mit Geflügelstreifen und Ei',7.5,'1,5,6,8,9,33'),
  it(null,'Klassiker','2x Geflügel-Jägerschnitzel mit Nudeln und Tomatensoße',9.5,'1,5,9,13,19,20,26')];
  const c1={id:uid(),name:'Max Mustermann',firma:'Beispiel GmbH'},c2={id:uid(),name:'Erika Muster',firma:'Arcus Park Verwaltung'},c3={id:uid(),name:'Anna Koch',firma:'Kaiskantine',ma:true};
- return {anbieter:'Kai Tandel Gastronomiebetriebe – KaisKantine',weeks:[w],items,customers:[c1,c2,c3],maRabatt:0,att:[{weekId:w.id,cid:c3.id,days:[0,2,4]},{weekId:w.id,cid:c1.id,days:[0,1,2,3,4]},{weekId:w.id,cid:c2.id,days:[1,3]}],orders:[],cur:w.id}}
+ return {anbieter:'Kai Tandel Gastronomiebetriebe – KaisKantine',weeks:[w],items,customers:[c1,c2,c3],maCap:4.57,att:[{weekId:w.id,cid:c3.id,days:[0,2,4]},{weekId:w.id,cid:c1.id,days:[0,1,2,3,4]},{weekId:w.id,cid:c2.id,days:[1,3]}],orders:[],cur:w.id}}
 let S=JSON.parse(localStorage.getItem(KEY)||'null')||seed();
 function save(){localStorage.setItem(KEY,JSON.stringify(S));if(window.remoteSave)remoteSave()}
 const W=()=>S.weeks.find(w=>w.id===S.cur)||S.weeks[0];
@@ -32,7 +32,12 @@ const itemsOf=(wid,day)=>S.items.filter(i=>i.weekId===wid&&(i.day===day||i.day==
 const attOf=(wid,cid)=>S.att.find(a=>a.weekId===wid&&a.cid===cid);
 const cust=id=>S.customers.find(c=>c.id===id)||{name:'?',firma:''};
 const item=id=>S.items.find(i=>i.id===id)||{name:'(gelöscht)',price:0};
-const priceFor=(c,i)=>(+i.price||0)*(c&&c.ma?1-(S.maRabatt||0)/100:1);
+const priceFor=(c,i)=>(+i.price||0);
+const maCap=()=>S.maCap==null?4.57:+S.maCap;
+// Tageskosten einer Person: Mitarbeiter zahlen pro Tag höchstens den Mitarbeiterpreis (Deckel)
+function dayRaw(cid,wid,d){return S.orders.filter(o=>o.weekId===wid&&o.cid===cid&&o.day===d).reduce((s,o)=>s+o.qty*priceFor(null,item(o.itemId)),0)}
+function dayCost(c,wid,d){const r=dayRaw(c.id,wid,d);return c.ma?Math.min(r,maCap()):r}
+function weekCost(c,wid){let t=0;for(let d=0;d<5;d++)t+=dayCost(c,wid,d);return t}
 const maTag=c=>c&&c.ma?'<span class="tag">Mitarbeiter</span>':'';
 const $=s=>document.querySelector(s);let adminTab='plan',kundeId=null;
 
@@ -49,16 +54,16 @@ function admin(){const w=W();let h=`<div class="tabs noprint card">${[['plan','S
   const grp=[...DAYS.map((d,i)=>[d,i]),['Ständige Karte',null]];
   for(const [l,d] of grp){const its=S.items.filter(i=>i.weekId===w.id&&i.day===d);h+=`<div class="card"><h2>${l}${d!==null?' <span class="muted">'+dayDate(w,d)+'</span>':''}</h2><table><tr><th>Kategorie</th><th>Gericht</th><th>Allergene</th><th class="right">Preis</th><th></th></tr>${its.map(i=>`<tr><td>${esc(i.cat)}</td><td><input value="${esc(i.name)}" size="40" onchange="upd('${i.id}','name',this.value)"></td><td><input value="${esc(i.all)}" size="12" onchange="upd('${i.id}','all',this.value)"></td><td class="right"><input type="number" step="0.1" style="width:6em" value="${i.price}" onchange="upd('${i.id}','price',+this.value)"></td><td><button class="del" onclick="delItem('${i.id}')">✕</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">keine Einträge</td></tr>'}</table></div>`}}
  if(adminTab==='kunden'||adminTab==='ma'){const isMA=adminTab==='ma',list=S.customers.filter(c=>!!c.ma===isMA);
-  h+=`<div class="card"><h2>${isMA?'Mitarbeiter':'Kunden'} – KW ${w.kw}</h2>${head(w)}${isMA?`<div class="row">Mitarbeiter-Rabatt: <input type="number" min="0" max="100" style="width:5em" value="${S.maRabatt||0}" onchange="S.maRabatt=+this.value;save()"> % auf alle Gerichte (0 = gleicher Preis, nur getrennte Auswertung)</div>`:''}
+  h+=`<div class="card"><h2>${isMA?'Mitarbeiter':'Kunden'} – KW ${w.kw}</h2>${head(w)}${isMA?`<div class="row"><b>Mitarbeiterpreis:</b> <input type="number" min="0" step="0.01" style="width:6em" value="${maCap().toFixed(2)}" onchange="S.maCap=+this.value;save();render()"> € pro Tag – ein Mitarbeiter zahlt pro Tag höchstens diesen Betrag (günstigere Bestellungen kosten den normalen Preis).</div>`:''}
   <div class="row"><input id="cname" placeholder="Name"><input id="cfirma" placeholder="Firma" value="${isMA?'Kaiskantine':''}"><button onclick="addCust(${isMA})">${isMA?'Mitarbeiter':'Kunde'} anlegen</button></div>
   <table class="fixed"><tr><th style="width:18%">Name</th><th style="width:18%">Firma</th>${DS.map((d,i)=>`<th>${d}<br><span class="muted">${dayDate(w,i)}</span></th>`).join('')}<th>Tage</th><th>Mitarb.</th><th></th></tr>${list.map(c=>{const a=attOf(w.id,c.id);const ds=a?a.days:[];return `<tr><td><input value="${esc(c.name)}" style="width:95%" onchange="updC('${c.id}','name',this.value)"></td><td><input value="${esc(c.firma)}" style="width:95%" onchange="updC('${c.id}','firma',this.value)"></td>${DS.map((_,i)=>`<td><input type="checkbox" ${ds.includes(i)?'checked':''} onchange="togDay('${c.id}',${i},this.checked)"></td>`).join('')}<td>${ds.length}</td><td><input type="checkbox" ${c.ma?'checked':''} title="Als Mitarbeiter führen" onchange="updC('${c.id}','ma',this.checked);render()"></td><td><button class="del" onclick="delCust('${c.id}')">✕</button></td></tr>`}).join('')||'<tr><td colspan=10 class="muted">keine Einträge</td></tr>'}</table>
   <p class="muted">Nur Personen mit mindestens einem Anwesenheitstag können in dieser Woche bestellen. Häkchen „Mitarb.“ verschiebt eine Person zwischen Kunden und Mitarbeitern.</p></div>`}
- if(adminTab==='abr'){const rows=S.customers.map(c=>{const os=S.orders.filter(o=>o.weekId===w.id&&o.cid===c.id);return{c,os,sum:os.reduce((s,o)=>s+o.qty*priceFor(c,item(o.itemId)),0),n:os.reduce((s,o)=>s+o.qty,0)}}).filter(r=>r.os.length);
+ if(adminTab==='abr'){const rows=S.customers.map(c=>{const os=S.orders.filter(o=>o.weekId===w.id&&o.cid===c.id);return{c,os,sum:weekCost(c,w.id),raw:os.reduce((s,o)=>s+o.qty*priceFor(c,item(o.itemId)),0),n:os.reduce((s,o)=>s+o.qty,0)}}).filter(r=>r.os.length);
   h+=`<div class="card"><h2>Abrechnung KW ${w.kw}</h2>${head(w)}<button class="noprint" onclick="print()">Drucken</button> <button class="noprint sec" onclick="csv()">CSV exportieren</button>
   <h3>Statistik</h3><table class="fixed"><tr><th>Gruppe</th><th class="right">Personen</th><th class="right">Essen</th><th class="right">Betrag</th></tr>${[['Kunden',rows.filter(r=>!r.c.ma)],['Mitarbeiter',rows.filter(r=>r.c.ma)],['Gesamt',rows]].map(([l,rs])=>`<tr><td>${l==='Gesamt'?'<b>Gesamt</b>':l}</td><td class="right">${rs.length}</td><td class="right">${rs.reduce((s,r)=>s+r.n,0)}</td><td class="right">${eur(rs.reduce((s,r)=>s+r.sum,0))}</td></tr>`).join('')}</table>`;
-  for(const [title,rs] of [['Kunden',rows.filter(r=>!r.c.ma)],['Mitarbeiter'+(S.maRabatt?` (−${S.maRabatt} %)`:''),rows.filter(r=>r.c.ma)]]){if(!rs.length)continue;h+=`<h2 style="margin-top:1.5rem">${title}</h2>`;
+  for(const [title,rs] of [['Kunden',rows.filter(r=>!r.c.ma)],['Mitarbeiter (max. '+eur(maCap())+' pro Tag)',rows.filter(r=>r.c.ma)]]){if(!rs.length)continue;h+=`<h2 style="margin-top:1.5rem">${title}</h2>`;
    const firmen={};rs.forEach(r=>firmen[r.c.firma||'–']=(firmen[r.c.firma||'–']||0)+r.sum);
-   rs.forEach(r=>{h+=`<h3>${esc(r.c.name)} ${maTag(r.c)} <span class="muted">${esc(r.c.firma)}</span></h3><table class="fixed"><tr><th style="width:18%">Tag</th><th>Gericht</th><th class="right" style="width:8%">Anz.</th><th class="right" style="width:12%">Einzel</th><th class="right" style="width:12%">Summe</th></tr>${r.os.sort((a,b)=>a.day-b.day).map(o=>{const i=item(o.itemId),p=priceFor(r.c,i);return `<tr><td>${DS[o.day]} ${dayDate(w,o.day)}</td><td>${esc(i.name)}</td><td class="right">${o.qty}</td><td class="right">${eur(p)}</td><td class="right">${eur(o.qty*p)}</td></tr>`}).join('')}<tr><th colspan=4>Gesamt</th><th class="right">${eur(r.sum)}</th></tr></table>`});
+   rs.forEach(r=>{h+=`<h3>${esc(r.c.name)} ${maTag(r.c)} <span class="muted">${esc(r.c.firma)}</span></h3><table class="fixed"><tr><th style="width:18%">Tag</th><th>Gericht</th><th class="right" style="width:8%">Anz.</th><th class="right" style="width:12%">Einzel</th><th class="right" style="width:12%">Summe</th></tr>${r.os.sort((a,b)=>a.day-b.day).map(o=>{const i=item(o.itemId),p=priceFor(r.c,i);return `<tr><td>${DS[o.day]} ${dayDate(w,o.day)}</td><td>${esc(i.name)}</td><td class="right">${o.qty}</td><td class="right">${eur(p)}</td><td class="right">${eur(o.qty*p)}</td></tr>`}).join('')}${r.raw>r.sum?`<tr><td colspan=4>Mitarbeiter-Deckel (max. ${eur(maCap())}/Tag)</td><td class="right">−${eur(r.raw-r.sum)}</td></tr>`:''}<tr><th colspan=4>Gesamt</th><th class="right">${eur(r.sum)}</th></tr></table>`});
    h+=`<h3>Summe je Firma – ${title}</h3><table class="fixed">${Object.entries(firmen).map(([f,s])=>`<tr><td>${esc(f)}</td><td class="right">${eur(s)}</td></tr>`).join('')}</table>`}
   h+=rows.length?'':'<p class="muted">Noch keine Bestellungen.</p>';h+='</div>'}
  if(adminTab==='daten'){h+=`<div class="card"><h2>Daten</h2><p>${window.REMOTE_ON?'✅ Gemeinsame Datenbank (Supabase) aktiv – alle Geräte sehen dieselben Daten.':'⚠️ Keine Datenbank konfiguriert – Daten liegen nur in diesem Browser (siehe README: Supabase einrichten).'}</p><div class="row">Anbieter: <input id="anb" size="50" value="${esc(S.anbieter)}"><button onclick="S.anbieter=$('#anb').value;save();render()">Speichern</button></div>
@@ -75,12 +80,12 @@ function togDay(cid,d,on){const w=W();let a=attOf(w.id,cid);if(!a)S.att.push(a={
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='essensplan-daten.json';a.click()}
 function imp(inp){const r=new FileReader();r.onload=()=>{try{S=JSON.parse(r.result);save();render()}catch(e){alert('Ungültige Datei')}};r.readAsText(inp.files[0])}
 function csv(){const w=W();const l=[['Kunde','Firma','Mitarbeiter','Tag','Datum','Gericht','Anzahl','Einzelpreis','Summe']];S.orders.filter(o=>o.weekId===w.id).forEach(o=>{const c=cust(o.cid),i=item(o.itemId);const pr=priceFor(c,i);l.push([c.name,c.firma,c.ma?'ja':'nein',DS[o.day],dayDate(w,o.day),i.name,o.qty,pr.toFixed(2).replace('.',','),(o.qty*pr).toFixed(2).replace('.',',')])});
+ S.customers.filter(c=>c.ma).forEach(c=>{for(let d=0;d<5;d++){const r=dayRaw(c.id,w.id,d),k=dayCost(c,w.id,d);if(r>k)l.push([c.name,c.firma,'ja',DS[d],dayDate(w,d),'Mitarbeiter-Deckel',1,'',(k-r).toFixed(2).replace('.',',')])}});
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+l.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(';')).join('\n')],{type:'text/csv'}));a.download=`abrechnung-KW${w.kw}-${w.year}.csv`;a.click()}
 
 // ---------- KUNDE ----------
 function kunde(){const w=W();const present=S.customers.filter(c=>(attOf(w.id,c.id)?.days||[]).length).sort((a,b)=>a.name.localeCompare(b.name));
- let h=`<div class="card"><h2>Essen bestellen – KW ${w.kw}</h2>${head(w)}<div class="row">Name auswählen: <select id="ksel" onchange="kundeId=this.value||null;render()"><option value="">– bitte wählen –</option>${present.map(c=>`<option value="${c.id}" ${c.id===kundeId?'selected':''}>${esc(c.name)}${c.firma?' ('+esc(c.firma)+')':''}${c.ma?' – Mitarbeiter':''}</option>`).join('')}</select>
- oder tippen: <input list="cl" id="kn" placeholder="Name eingeben" oninput="nameFb()" onkeydown="if(event.key==='Enter')pickK()"><datalist id="cl">${present.map(c=>`<option value="${esc(c.name)}">${esc(c.firma)}</option>`).join('')}</datalist><button onclick="pickK()">Weiter</button> <span id="kfb"></span></div></div>`;
+ let h=`<div class="card"><h2>Essen bestellen – KW ${w.kw}</h2>${head(w)}<div class="row">Ihr Name: <span class="namewrap"><input id="kn" class="${kundeId?'found':''}" placeholder="Vor- und Nachname eingeben" autocomplete="off" value="${kundeId?esc(cust(kundeId).name):''}" oninput="nameFb()" onkeydown="if(event.key==='Enter')pickK()"><span class="chk">✓</span></span><button onclick="pickK()">Weiter</button> <span id="kfb"></span></div></div>`;
  if(!kundeId)return h;const c=cust(kundeId),a=attOf(w.id,c.id);if(!a||!a.days.length)return h+`<div class="card">Für ${esc(c.name)} sind in KW ${w.kw} keine Tage hinterlegt. Bitte an die Verwaltung wenden.</div>`;
  let tot=0;h+=`<div class="card"><h2>✓ ${esc(c.name)} ${maTag(c)} <span class="muted">${esc(c.firma)}</span></h2><div class="week">`;
  for(let d=0;d<5;d++){const on=a.days.includes(d);h+=`<div class="day ${on?'':'off'}"><h3>${DS[d]} <span class="muted">${dayDate(w,d)}</span></h3>`;
@@ -88,24 +93,26 @@ function kunde(){const w=W();const present=S.customers.filter(c=>(attOf(w.id,c.i
   for(const i of itemsOf(w.id,d)){const o=S.orders.find(o=>o.weekId===w.id&&o.cid===c.id&&o.day===d&&o.itemId===i.id);const q=o?o.qty:0,p=priceFor(c,i);dsum+=q*p;
    if(i.cat!==lastCat)h+=`<div class="cat">${esc(lastCat=i.cat)}</div>`;
    h+=`<label class="dish ${q?'sel':''}"><span>${esc(i.name)}<br><span class="muted">${eur(p)}${i.all?' · '+esc(i.all):''}</span></span><input type="number" min="0" max="20" value="${q}" onchange="setQ('${c.id}',${d},'${i.id}',+this.value)"></label>`}
-  tot+=dsum;h+=`<div class="dsum">Tag: ${eur(dsum)}</div></div>`}
+  const dc=dayCost(c,w.id,d);tot+=dc;h+=`<div class="dsum">Tag: ${eur(dc)}${dc<dsum?`<br><span class="muted">gedeckelt (statt ${eur(dsum)})</span>`:''}</div></div>`}
  return h+`</div><h3>Summe Woche: ${eur(tot)}</h3><p class="ok">Bestellungen werden automatisch gespeichert.</p></div>`}
 function findName(n){n=n.trim().toLowerCase();return S.customers.find(c=>c.name.toLowerCase()===n)}
-function nameFb(){const n=$('#kn').value,c=findName(n),e=$('#kfb');if(!n.trim()){e.textContent='';return}
+function nameFb(){const n=$('#kn').value,c=findName(n),e=$('#kfb');$('#kn').classList.remove('found');if(!n.trim()){e.textContent='';return}
  if(!c){e.innerHTML='<span style="color:#b33">✗ Name nicht bekannt</span>';return}
- const ok=(attOf(W().id,c.id)?.days||[]).length;e.innerHTML=ok?`<span class="ok">✓ ${esc(c.name)} gefunden${c.ma?' (Mitarbeiter)':''}</span>`:'<span style="color:#b33">Name bekannt, aber diese Woche keine Tage hinterlegt</span>'}
-function pickK(){const c=findName($('#kn').value);if(!c){alert('Name nicht gefunden. Bitte aus der Liste wählen oder an die Verwaltung wenden.');return}kundeId=c.id;render()}
+ const ok=(attOf(W().id,c.id)?.days||[]).length;$('#kn').classList.toggle('found',!!ok);e.innerHTML=ok?`<span class="ok">✓ ${esc(c.name)} gefunden${c.ma?' (Mitarbeiter)':''}</span>`:'<span style="color:#b33">Name bekannt, aber diese Woche keine Tage hinterlegt</span>'}
+function pickK(){const c=findName($('#kn').value);if(!c){alert('Name nicht gefunden. Bitte genau wie bei der Verwaltung hinterlegt eingeben.');return}kundeId=c.id;render()}
 function setQ(cid,day,itemId,q){const w=W();S.orders=S.orders.filter(o=>!(o.weekId===w.id&&o.cid===cid&&o.day===day&&o.itemId===itemId));if(q>0)S.orders.push({weekId:w.id,cid,day,itemId,qty:q});save();render()}
 
 // ---------- KANTINE ----------
 function kantine(){const w=W();const all=S.orders.filter(o=>o.weekId===w.id),wk={};let wtot=0;
- const val=o=>o.qty*priceFor(cust(o.cid),item(o.itemId));all.forEach(o=>wtot+=val(o));
+ const val=o=>o.qty*priceFor(null,item(o.itemId));S.customers.forEach(c=>wtot+=weekCost(c,w.id));
  let h=`<div class="card"><h2>Kantinen-Planung KW ${w.kw}</h2>${head(w)}<p><b>Wochen-Gesamtpreis (veranschlagt): ${eur(wtot)}</b> · ${all.reduce((s,o)=>s+o.qty,0)} Essen</p><button class="noprint" onclick="print()">Drucken</button></div>`;
  const cols='<colgroup><col style="width:40%"><col style="width:10%"><col style="width:50%"></colgroup>';
- for(let d=0;d<5;d++){const os=all.filter(o=>o.day===d);const sum={};os.forEach(o=>sum[o.itemId]=(sum[o.itemId]||0)+o.qty);const dt=os.reduce((s,o)=>s+val(o),0);
+ for(let d=0;d<5;d++){const os=all.filter(o=>o.day===d);const sum={};os.forEach(o=>sum[o.itemId]=(sum[o.itemId]||0)+o.qty);const dt=S.customers.reduce((s,c)=>s+dayCost(c,w.id,d),0);
   h+=`<div class="card"><h2>${DAYS[d]} <span class="muted">${dayDate(w,d)}</span></h2>${os.length?`<table class="fixed">${cols}<tr><th>Gericht</th><th class="right">Anzahl</th><th>Für</th></tr>${Object.entries(sum).map(([id,n])=>{wk[id]=(wk[id]||0)+n;return `<tr><td>${esc(item(id).name)}</td><td class="right"><b>${n}</b></td><td>${os.filter(o=>o.itemId===id).map(o=>esc(cust(o.cid).name)+(o.qty>1?' ×'+o.qty:'')+(cust(o.cid).ma?' [MA]':'')+' <span class="muted">('+esc(cust(o.cid).firma)+')</span>').join(', ')}</td></tr>`}).join('')}<tr><th>Tagessumme</th><th class="right">${os.reduce((s,o)=>s+o.qty,0)}</th><th>${eur(dt)}</th></tr></table>`:'<p class="muted">Keine Bestellungen.</p>'}</div>`}
- h+=`<div class="card"><h2>Wochensumme</h2><table class="fixed">${cols}<tr><th>Gericht</th><th class="right">Anzahl</th><th>Preis</th></tr>${Object.entries(wk).map(([id,n])=>`<tr><td>${esc(item(id).name)}</td><td class="right"><b>${n}</b></td><td>${eur(all.filter(o=>o.itemId===id).reduce((s,o)=>s+val(o),0))}</td></tr>`).join('')}<tr><th>Gesamt</th><th class="right">${all.reduce((s,o)=>s+o.qty,0)}</th><th>${eur(wtot)}</th></tr></table></div>`;return h}
+ h+=`<div class="card"><h2>Wochensumme</h2><table class="fixed">${cols}<tr><th>Gericht</th><th class="right">Anzahl</th><th>Listenpreis</th></tr>${Object.entries(wk).map(([id,n])=>`<tr><td>${esc(item(id).name)}</td><td class="right"><b>${n}</b></td><td>${eur(all.filter(o=>o.itemId===id).reduce((s,o)=>s+val(o),0))}</td></tr>`).join('')}<tr><th>Gesamt (Listenpreis)</th><th class="right">${all.reduce((s,o)=>s+o.qty,0)}</th><th>${eur(all.reduce((s,o)=>s+val(o),0))}</th></tr><tr><th>Gesamt veranschlagt (inkl. Mitarbeiter-Deckel)</th><th></th><th>${eur(wtot)}</th></tr></table></div>`;return h}
 
-function render(){if(!S.weeks.some(w=>w.id===S.cur))S.cur=S.weeks[0].id;weekSel();const v=(location.hash||'#kunde').slice(1);document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash==='#'+v));
- $('#app').innerHTML=v==='admin'?(sessionStorage.getItem('adminOk')?admin():loginForm()):v==='kantine'?kantine():kunde()}
+function home(){const w=W();return `<div class="home"><a class="tile big" href="#kunde"><span class="ico">🍽️</span>Bestellen<small>Essen für KW ${w.kw} auswählen</small></a>
+ <a class="tile" href="#kantine"><span class="ico">👩‍🍳</span>Kantine / Ausgabe<small>Planung &amp; Ausgabeliste</small></a><a class="tile" href="#admin"><span class="ico">🔒</span>Admin<small>Speiseplan, Kunden, Abrechnung</small></a></div>`}
+function render(){if(!S.weeks.some(w=>w.id===S.cur))S.cur=S.weeks[0].id;weekSel();const v=(location.hash||'#start').slice(1);document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash==='#'+v));
+ $('#app').innerHTML=v==='start'?home():v==='admin'?(sessionStorage.getItem('adminOk')?admin():loginForm()):v==='kantine'?kantine():kunde()}
 window.onhashchange=render;render();if(window.remoteInit)remoteInit();
